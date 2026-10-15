@@ -304,6 +304,13 @@ details summary::-webkit-details-marker{display:none}
 .why-label{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 blockquote{margin:0;padding:12px 14px;border-left:3px solid var(--accent);background:var(--raised);border-radius:0 12px 12px 0;font-weight:700;white-space:pre-wrap;overflow-wrap:anywhere}
 blockquote.empty-why{font-weight:500;color:var(--muted)}
+.quote{margin:0;font-size:15px;font-style:italic;line-height:1.5;text-wrap:pretty}
+.quote-a{font-size:13px;font-weight:800;color:var(--teal)}
+.quote-card{background:linear-gradient(135deg,var(--surface),var(--teal-soft))}
+.mhist{display:flex;flex-direction:column}
+.mhist div{padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.mhist div:last-child{border-bottom:0}
+.mhist b{display:block;font-size:12px;color:var(--muted)}
 .upbar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:15;max-width:520px;margin:0 auto;background:var(--accent);color:var(--accent-ink);border-radius:16px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .upbar span{flex:1;font-size:14px;font-weight:700;min-width:0}
 .upbar button{background:var(--accent-ink);color:var(--accent);border:0;border-radius:10px;padding:9px 14px;font-weight:800;flex:none}
@@ -418,6 +425,21 @@ blockquote.empty-why{font-weight:500;color:var(--muted)}
           <label class="switch"><span>Odak seansı bitince müziği durdur</span><input type="checkbox" id="spPause"></label>
           <p class="note">Düğmeler telefonda çalan müziği kontrol eder. Spotify'da listeyi bir kez başlatman yeter, sonra buradan duraklatıp geçebilirsin.</p>
         </div>
+        <div class="card tab" id="motCard">
+          <label class="switch"><span class="label">Deniz kızı mesajları 🧜‍♀️</span><input type="checkbox" id="motOn"></label>
+          <p class="note">Gün içinde rastgele saatlerde, o günkü durumuna göre seçilmiş bir mesaj ya da ünlü bir söz gelir. Hepsi bitmeden aynısı tekrar gelmez. Odak seansında ve ders saatlerinde rahatsız etmez, bitince gelir.</p>
+          <div class="field"><span class="note">Günde kaç mesaj?</span><div class="chips" id="motPer"></div></div>
+          <div class="row2">
+            <div class="field"><label class="note" for="motStart">En erken</label><input type="time" id="motStart"></div>
+            <div class="field"><label class="note" for="motEnd">En geç</label><input type="time" id="motEnd"></div>
+          </div>
+          <div class="field"><label class="note" for="motStyle">Mesaj türü</label><select id="motStyle"><option value="mix">Karışık: kişisel mesajlar + ünlü sözler</option><option value="quotes">Sadece ünlü sözler</option><option value="personal">Sadece kişisel mesajlar</option></select></div>
+          <label class="switch"><span>Ders saatlerinde sessiz kal</span><input type="checkbox" id="motQuiet"></label>
+          <label class="switch"><span>Dalgalı animasyonlu kart</span><input type="checkbox" id="motOverlay"></label>
+          <div class="banner" id="overlayBanner" hidden>Dalgalı kartın ekranın üstünden inebilmesi için "Diğer uygulamaların üzerinde göster" iznini aç. İzin yoksa mesajlar normal bildirim olarak gelir, yine deniz kızı sesiyle.<button id="overlayFix">İzni aç</button></div>
+          <div class="btn-row"><button class="ghost" id="motSound">🎵 Sesi dinle</button><button class="ghost" id="motTest">Şimdi bir tane gönder</button></div>
+          <div id="motHist"></div>
+        </div>
         <div class="card tab">
           <label class="switch"><span class="label">Günlük hatırlatma</span><input type="checkbox" id="remOn"></label>
           <div class="field"><label class="note" for="remAt">Hedefin bitmemişse bu saatte bildirim gelir.</label><input type="time" id="remAt"></div>
@@ -475,6 +497,7 @@ blockquote.empty-why{font-weight:500;color:var(--muted)}
     <div class="breath"><div class="breath-dot"></div><strong id="breathTxt">Yavaşça nefes al</strong></div>
     <div class="why-label">Neden başladın?</div>
     <blockquote id="urgeWhy"></blockquote>
+    <p class="quote" id="urgeQuote"></p>
     <button class="primary" id="urgeStay">Devam ediyorum</button>
     <button class="ghost" id="urgeQuit" disabled>Bırakmak için bekle 1:00</button>
   </div>
@@ -511,7 +534,7 @@ blockquote.empty-why{font-weight:500;color:var(--muted)}
 
 <script>
 'use strict';
-const WEB_VERSION = 3;
+const WEB_VERSION = 4;
 /* ================= Sabitler ================= */
 const COURSES = {
   'EEM 3127': 'Elektrik Makineleri I',
@@ -541,6 +564,175 @@ const SECTIONS = [
   { c: 'T-W', k: 'W', n: 'Writing', tr: 'Yazma', tasks: ['Build a Sentence', 'Write an Email', 'Write for an Academic Discussion'] }
 ];
 const SEC_BY_C = {}; SECTIONS.forEach(s => { SEC_BY_C[s.c] = s; });
+
+/* Deniz kızı mesajları: [id, metin, koşullar]. Koşullar telefonda o anki duruma göre denetlenir.
+   {streak} {streakNext} {dersLeft} {ingLeft} {exam} {examWhen} {toeflWhen} {toeflDays} {weakSec} {name} */
+const MSGS = [
+  ['g01', 'Büyük işler küçük başlangıçlarla olur. Şimdi 25 dakika, sadece 25.', 'notdone'],
+  ['g02', 'Motivasyonun gelmesini bekleme. Önce başla, o arkadan yetişir.', 'notdone'],
+  ['g03', 'Telefonu bırak, defteri aç. Gerisi kendiliğinden gelir.', 'notdone'],
+  ['g04', 'Bugünün tek görevi ilk 5 dakikayı atlatmak. Sonrası kolay.', 'notdone'],
+  ['g05', 'Dalgalar biri gider biri gelir ama deniz hiç durmaz. Sen de durma. 🌊', 'notdone'],
+  ['g06', 'Disiplin, canın istemediğinde de yapabilmektir. Tam şu an gibi.', 'notdone'],
+  ['g07', 'Bir saat sonra "iyi ki başlamışım" diyeceksin. Söz.', 'notdone'],
+  ['g08', 'Mükemmel olması gerekmiyor. Yapılmış olması yeterli.', 'notdone'],
+  ['g09', 'Bugünkü küçük tekrar, sınav haftasındaki büyük paniği önler.', 'notdone'],
+  ['g10', 'İnci, kumun içinde sabırla büyür. Sen de her gün biraz büyüyorsun. 🐚', ''],
+  ['g11', 'Oyun bekleyebilir. Mezuniyet beklemez. 🎓', 'notdone'],
+  ['g12', 'Zor olan başlamak. Odak ekranını aç, gerisini sayaç halletsin. ⏱️', 'notdone'],
+  ['g13', 'Kendine verdiğin sözü tut. Kimse görmese bile.', ''],
+  ['g14', 'Yorgun musun? 10 dakikalık mini bir seansla başla. Küçük olsun ama olsun.', 'notdone'],
+  ['g15', 'Okyanus damlalardan oluşur. Bugünün damlası 25 dakika. 💧', 'notdone'],
+  ['g16', 'Çelik dövüldükçe sertleşir. Bugün biraz dövülme günü. ⚒️', 'notdone'],
+  ['g17', 'Ertelemek bugünü rahatlatır, yarını zorlaştırır.', 'notdone'],
+  ['g18', 'Şu an yaptığın seçim, birkaç ay sonraki seni şekillendiriyor.', ''],
+  ['g19', 'Herkes başlar, azı devam eder. Sen devam edenlerden ol.', ''],
+  ['g20', 'Bir deniz kızı bile şarkısına her gün çalışır. Sıra sende. 🧜‍♀️', 'notdone'],
+  ['g21', 'Kafan dağınıksa önce masanı topla, sonra 25 dakika başla.', 'notdone'],
+  ['g22', 'Sosyal medya seni bekler. Sınav beklemez.', 'notdone'],
+  ['g23', 'Pusulan hazır, rotan belli. Sadece yelkeni aç. ⛵', 'notdone'],
+  ['g24', 'Bugün kendine bir iyilik yap: dersini çalış.', 'notdone'],
+  ['g25', 'En zor kısım şu an: başlamak. Hadi, 3… 2… 1…', 'notdone'],
+  ['g26', 'Gelecekteki sen, bugünkü sana teşekkür edecek.', ''],
+  ['g27', 'Küçük ama her gün. Bütün sır bu.', ''],
+  ['g28', 'Kendinle yarış, başkalarıyla değil. Dünden biraz daha iyi olman yeter.', ''],
+  ['g29', 'Bir dalga bile kıyıya ulaşmak için yol alır. Yola çık. 🌊', 'notdone'],
+  ['g30', 'Odaklanmış 25 dakika, dağınık geçen 2 saatten değerlidir.', ''],
+  ['d01', 'Bugünün hedefleri tamam! Deniz kızı seninle gurur duyuyor. 🧜‍♀️', 'done'],
+  ['d02', 'İşte bu! Bugün kendine verdiğin sözü tuttun.', 'done'],
+  ['d03', 'Hedef tamam. Şimdi dinlenmek senin hakkın.', 'done'],
+  ['d04', 'Bugünü kazandın. Yarın aynı kararlılıkla devam. ✨', 'done'],
+  ['d05', 'Tamamladın. Bu his bağımlılık yapar, alış ona.', 'done'],
+  ['d06', 'Bugünlük yelkenleri toplayabilirsin, kaptan. ⚓', 'done'],
+  ['d07', 'Harika iş! İstersen bonus 10 dakika, istemezsen keyfine bak.', 'done'],
+  ['d08', 'Bir gün daha hanene yazıldı. Seri büyüyor. 🌊', 'done'],
+  ['d09', 'Serin {streak} gün oldu! Bu tesadüf değil, emek. 🏆', 'done streak2'],
+  ['d10', 'Bugün tamam ✓ Yarın için küçük bir ipucu: ilk seansı sabah aç.', 'done evening'],
+  ['s01', '{streak} günlük serin var. Bugün de ekle, {streakNext} olsun!', 'streak2 notdone'],
+  ['s02', '{streak} gündür vazgeçmedin. Bugün bırakmak için kötü bir gün olurdu.', 'streak2 notdone'],
+  ['s03', 'Zincirin {streak} halka oldu. Bir halka daha ekle. ⛓️', 'streak2 notdone'],
+  ['s04', '{streak} gün üst üste! Bu artık bir alışkanlık olmaya başladı.', 'streak5'],
+  ['s05', '{streak} gün… Başladığın gün bunu hayal edebilir miydin?', 'streak5'],
+  ['s06', 'Dalgalar {streak} gündür aynı ritimle vuruyor, tıpkı senin gibi. 🌊', 'streak2'],
+  ['r01', 'Dün kaçırdın, sorun değil. Ama bugün de kaçarsa seri gider. Kurtarmak senin elinde.', 'risk'],
+  ['r02', 'Serin tehlikede! Bugün iki hedefi bitirirsen kurtulur. ⚓', 'risk'],
+  ['r03', 'Bir gün kaçırmak insanlık hâli, iki gün kaçırmak alışkanlık. Bugün geri dön.', 'risk'],
+  ['m01', 'Dün olmadı, bugün yeni bir gün. Sıfırdan başlamak da bir başlangıçtır.', 'missed notdone'],
+  ['m02', 'Dalga çekildi ama geri gelir. Sen de geri gel. 🌊', 'missed notdone'],
+  ['m03', 'Düşmek sorun değil, yerde kalmak sorun. Kalk, 10 dakikayla başla.', 'missed notdone'],
+  ['n01', 'Bugün henüz başlamadın. İlk seansı açmak için mükemmel bir an.', 'none'],
+  ['n02', 'Bugünün sayacı hâlâ sıfırda. Hadi onu biraz kıpırdatalım.', 'none'],
+  ['n03', 'Bugünün sayfası boş. İlk satırı sen yaz. ✍️', 'none'],
+  ['p01', 'Güzel başladın! Bugün {dersLeft} dk ders ve {ingLeft} dk İngilizce kaldı.', 'partial dersleft ingleft'],
+  ['p02', 'Yarısı tamam, yarısı kaldı. En güzel kısım bitirmek.', 'partial'],
+  ['p03', 'Başladın, en zor kısım buydu. Şimdi bitir.', 'partial'],
+  ['p04', 'Ders tamam! Şimdi {ingLeft} dk İngilizce, sonra gün kapanıyor.', 'onlyIng'],
+  ['p05', 'Sadece {ingLeft} dakika İngilizce kaldı. Bir TOEFL görevi seç ve bitir.', 'onlyIng'],
+  ['p06', 'Ders kısmı tamam ✓ Şimdi biraz {weakSec} çalışmaya ne dersin?', 'onlyIng'],
+  ['p07', 'İngilizce tamam! {dersLeft} dk ders kaldı, gün senin.', 'onlyDers'],
+  ['p08', 'Bir adım kaldı: {dersLeft} dakika ders. Bugün işlenen konuyu tekrar et.', 'onlyDers weekday'],
+  ['e01', '{exam} {examWhen}. Bugünkü 25 dakikayı ona ayır.', 'exam notdone'],
+  ['e02', 'Takvime bak: {exam} {examWhen}. Şimdi çalıştığın her dakika o gün işine yarayacak.', 'exam'],
+  ['e03', '{exam} yaklaşıyor ({examWhen}). Sınav haftası paniği yerine bugün sakin bir tekrar.', 'exam notdone'],
+  ['e04', '{exam} {examWhen}! Özet çıkar, eski soruları çöz, erken uyu.', 'examNear'],
+  ['e05', 'Son düzlük: {exam} {examWhen}. Artık yeni konu değil, tekrar zamanı.', 'examNear'],
+  ['t01', 'TOEFL {toeflWhen}. Bugün biraz {weakSec} çalışmaya ne dersin?', 'toefl notdone'],
+  ['t02', 'Bu hafta en az çalıştığın bölüm {weakSec}. Bugün ona 15 dakika ver.', 'ingleft'],
+  ['t03', "TOEFL'a {toeflDays} gün var. Her gün 15 dakika, sınavda büyük rahatlık.", 'toeflFar'],
+  ['t04', "Speaking'i sesli çalış: kendini kaydet, dinle, tekrar dene. 🎙️", 'ingleft'],
+  ['t05', 'Listening için bugün kısa bir akademik konuşma dinle ve not al. 🎧', 'ingleft'],
+  ['t06', "Writing'de fikir + örnek + kısa sonuç. Bugün bir paragraf yaz. ✍️", 'ingleft'],
+  ['t07', 'TOEFL {toeflWhen}! Artık her gün kısa bir deneme bölümü çöz.', 'toeflNear'],
+  ['t08', 'Okuduğun her İngilizce paragraf, sınavda bir adım önde olman demek. 📖', 'ingleft'],
+  ['h01', 'Günaydın! Günün en taze saatleri şimdi. Zor dersi sabaha koy. ☀️', 'morning notdone'],
+  ['h02', 'Sabah çalışılan 25 dakika, akşamki 1 saate bedel.', 'morning notdone'],
+  ['h03', 'Kahveni al, masana otur. Günün ilk zaferi seni bekliyor. ☕', 'morning notdone'],
+  ['h04', 'Öğleden sonra rehaveti mi? 10 dakikalık bir seansla kır onu.', 'noon notdone'],
+  ['h05', 'Ders çıkışı en iyi tekrar zamanı. Konu tazeyken 25 dakika!', 'noon notdone weekday'],
+  ['h06', 'Akşam oldu. Bugünü "yaptım" diyerek kapatmak ister misin? 🌙', 'evening notdone'],
+  ['h07', 'Günün bitmesine az kaldı. Bir seans daha ve gün tamam.', 'evening partial'],
+  ['h08', 'Akşam sakinliği odaklanmak için ideal. Telefonu ters çevir, başla.', 'evening notdone'],
+  ['h09', 'Geç oldu. Uykunu feda etme; yarın sabah erken başla. 🌙', 'night'],
+  ['h10', 'Uyumadan önce 10 dakika kelime tekrarı? Kısa ve tatlı.', 'night ingleft'],
+  ['w01', 'Hafta sonu da seriye sayılır. Kısa bir seans, sonra keyif! 🏖️', 'weekend notdone'],
+  ['w02', 'Hafta sonu sakin bir deniz gibi olsun: dingin ama boş değil. 🌊', 'weekend notdone'],
+  ['w03', 'Herkes dinlenirken 25 dakika çalışırsan fark böyle açılır.', 'weekend notdone'],
+  ['w04', 'Yeni hafta, yeni sayfa. Pazartesiyi güçlü başlat! 💪', 'monday notdone'],
+  ['w05', 'Cuma! Haftayı güzel bitir, hafta sonu gönül rahatlığıyla dinlen.', 'friday notdone'],
+  ['y01', '{name}, bugün de buradayız. Bir seans aç, gerisi gelir.', 'name notdone'],
+  ['y02', '{name}, kendine güven. Şimdiye kadar düşündüğünden fazlasını yaptın.', 'name'],
+  ['y03', 'Hey {name}! Deniz kızı seni bekliyor. 25 dakikalık bir dalışa ne dersin? 🧜‍♀️', 'name notdone'],
+  ['x01', 'Derin denizlerde en güzel inciler bulunur. Derin odak da öyle. 🐚', ''],
+  ['x02', 'Fırtına ne kadar sert olursa olsun, deniz kızı şarkısını bırakmaz. 🧜‍♀️', ''],
+  ['x04', 'Dalga dalga ilerle; her seans kıyıya bir adım daha. 🌊', ''],
+  ['x05', 'Mercanlar yavaş büyür ama koca resifler kurar. Sabır. 🐠', ''],
+  ['x06', 'Deniz yıldızı kopan kolunu yeniden büyütür. Sen de düştüğün yerden yeniden başlayabilirsin. ⭐', ''],
+  ['x07', 'Akıntıya karşı yüzmek yorar ama seni güçlendirir. 💪', ''],
+  ['x08', 'Okyanusun dibi sessizdir. Telefonu sessize al, sen de derine dal. 🐠', 'notdone'],
+  ['x09', 'Fener uzakta olsa da yolu gösterir. Hedefini unutma. 🗼', ''],
+  ['z01', "Instagram'da kaydırdığın her dakika başkasının hikâyesi. Sen kendininkini yaz.", 'notdone'],
+  ['z02', 'Canın oyun mu istiyor? Önce görev, sonra keyif. Sıra önemli.', 'notdone'],
+  ['z03', 'Elin telefona gittiyse dur ve nefes al. Bu istek 10 dakikada geçer. 💦', ''],
+  ['z04', "Kaçma isteği geldiğinde uygulamadaki 'Dikkatim dağılıyor' düğmesi seni bekliyor.", ''],
+  ['z05', 'Dikkat bir kas gibidir. Her geri getirişinde biraz daha güçlenir.', ''],
+  ['u01', 'Son sınıf! Bu dönem kariyerinin temeli. Her ders bir tuğla. 🎓', ''],
+  ['u02', 'Mezuniyet gününde "iyi ki" diyeceğin günler, bugünkü gibi sıradan günler.', ''],
+  ['u03', 'Mühendislik problem çözmektir. Bugünün problemi: başlamak. 🔧', 'notdone'],
+  ['u04', 'Akım gibi ol: dirençle karşılaşınca bile akmaya devam et. ⚡', ''],
+  ['u05', 'Yüksek gerilim gibi düşün: enerjini boşa harcama, doğru hatta aktar. ⚡', ''],
+  ['u06', 'Sinyalde gürültü çoksa filtre uygula. Hayatta da öyle: bildirimleri kapat. 📵', 'notdone'],
+  ['u07', 'PLC gibi çalış: döngü döngü, aksatmadan. 🔁', ''],
+  ['u08', 'Verimin yüksek olsun: az kayıp, çok iş. Odak seansı tam bunun için.', 'notdone'],
+  ['k01', 'Bugün su içtin mi? Beynin de bir makine, soğutmayı unutma. 💧', ''],
+  ['k02', 'Uzun süredir oturuyorsan kalk, biraz esne. Sonra tam gaz devam.', ''],
+  ['k03', 'Uyku da çalışmanın bir parçası. Bu gece erken yatmayı unutma. 😴', 'evening'],
+  ['c01', 'Bugün kötü geçtiyse kendine yüklenme. Küçük bir adım bile günü kurtarır.', 'notdone'],
+  ['c02', 'Bazen 10 dakika da yeter. Önemli olan zinciri koparmamak.', 'notdone'],
+  ['c03', 'Sandığından daha güçlüsün. Bunu her gün biraz daha kanıtlıyorsun.', ''],
+  ['c04', 'Mükemmel günü bekleme. Normal bir günde iyi bir iş çıkar.', 'notdone']
+];
+/* Ünlü sözler: yalnızca kaynağı belli olanlar (sık yanlış atfedilenler alınmadı). [id, söz, kişi] */
+const QUOTES = [
+  ['q01', 'Biz ertelerken hayat akıp gider.', 'Seneca'],
+  ['q02', 'Her şey başkasınındır; yalnızca zaman bizimdir.', 'Seneca'],
+  ['q03', 'Yaşamak için kısa bir zamanımız yok; onun çoğunu boşa harcıyoruz.', 'Seneca'],
+  ['q04', 'Hangi limana gideceğini bilmeyene hiçbir rüzgâr yardım etmez.', 'Seneca'],
+  ['q05', 'Eylemin önündeki engel, eylemi ilerletir. Yolda duran, yolun kendisi olur.', 'Marcus Aurelius'],
+  ['q06', 'İyi bir insanın nasıl olması gerektiğini tartışmayı bırak. Öyle ol.', 'Marcus Aurelius'],
+  ['q07', 'Önce kendine ne olmak istediğini söyle; sonra yapman gerekeni yap.', 'Epiktetos'],
+  ['q08', 'Kendine hâkim olmayan hiç kimse özgür değildir.', 'Epiktetos'],
+  ['q09', 'Yapmadan önce öğrenmemiz gereken şeyleri, onları yaparak öğreniriz.', 'Aristoteles'],
+  ['q10', 'Biz, tekrar tekrar yaptığımız şeyleriz. Mükemmellik bir eylem değil, bir alışkanlıktır.', 'Will Durant'],
+  ['q11', 'Her işin en önemli kısmı başlangıcıdır.', 'Platon'],
+  ['q12', 'Bin millik yolculuk tek bir adımla başlar.', 'Lao Tzu'],
+  ['q13', 'Düşünmeden öğrenmek boşa emektir; öğrenmeden düşünmek tehlikelidir.', 'Konfüçyüs'],
+  ['q14', 'Demir kullanılmayınca paslanır, durgun su bozulur; hareketsizlik de zihnin gücünü tüketir.', 'Leonardo da Vinci'],
+  ['q15', 'Daha uzağı görebildiysem, devlerin omuzlarında durduğum içindir.', 'Isaac Newton'],
+  ['q16', 'Kaybedilen zaman bir daha asla bulunmaz.', 'Benjamin Franklin'],
+  ['q17', 'Dâhilik yüzde bir ilham, yüzde doksan dokuz terdir.', 'Thomas Edison'],
+  ['q18', 'Bir mucidin, zihninin bir eserinin başarıya ulaştığını görürken duyduğu heyecan kadar büyük bir heyecan olabileceğini sanmıyorum.', 'Nikola Tesla'],
+  ['q19', 'Hayat bisiklete binmek gibidir. Dengede kalmak için hareket etmeye devam etmelisin.', 'Albert Einstein'],
+  ['q20', 'Hayal gücü bilgiden daha önemlidir.', 'Albert Einstein'],
+  ['q21', 'Hayat hiçbirimiz için kolay değil. Ama ne olmuş? Azimli olmalı ve her şeyden önce kendimize güvenmeliyiz.', 'Marie Curie'],
+  ['q22', 'İlk ilke kendini kandırmamaktır; ve kandırılması en kolay kişi sensin.', 'Richard Feynman'],
+  ['q23', 'Büyük işler bir anlık hevesle değil, bir araya getirilen küçük şeylerle yapılır.', 'Vincent van Gogh'],
+  ['q24', 'En güçlü iki savaşçı sabır ve zamandır.', 'Lev Tolstoy'],
+  ['q25', 'Bilmek yetmez, uygulamalıyız. İstemek yetmez, yapmalıyız.', 'Goethe'],
+  ['q26', 'Asla pes etmeyin; asla, asla, asla.', 'Winston Churchill'],
+  ['q27', 'Zamanın sınırlı; onu başkasının hayatını yaşayarak harcama.', 'Steve Jobs'],
+  ['q28', 'Hayatımda defalarca başarısız oldum. İşte bu yüzden başarılıyım.', 'Michael Jordan'],
+  ['q29', 'Bir şeylerde başarısız olmadan yaşamak imkânsızdır; meğer ki o kadar temkinli yaşayasın ki hiç yaşamamış sayılasın.', 'J. K. Rowling'],
+  ['q30', 'Dünyada her şey için, medeniyet için, hayat için, muvaffakiyet için en hakiki mürşit ilimdir, fendir.', 'Mustafa Kemal Atatürk'],
+  ['q31', 'İlim ilim bilmektir, ilim kendin bilmektir.', 'Yunus Emre'],
+  ['q32', 'Yaşamak şakaya gelmez, büyük bir ciddiyetle yaşayacaksın, bir sincap gibi mesela.', 'Nazım Hikmet'],
+  ['q33', 'Hayat kısa, sanat uzun.', 'Hipokrat'],
+  ['q34', 'Su damlası taşı oyar.', 'Ovidius'],
+  ['q35', 'Limandaki gemi güvendedir ama gemiler bunun için yapılmamıştır.', 'John A. Shedd']
+];
+const MOT_TITLES = ['🧜‍♀️ Deniz kızından mesaj', '🌊 Dalgalardan bir not', '🐚 Deniz kabuğu fısıldıyor', '🧜‍♀️ Deniz kızı diyor ki', '🌊 Kıyıdan selam', '🐬 Yunuslardan haber var', '⚓ Kaptana not', '💦 Derinlerden bir mesaj', '🧜‍♀️ Şşş… sana bir mesaj var', '✨ Çelik İrade'];
+const QUOTE_TITLES = ['💬 Bir söz', '🐚 Kabuktan bir söz', '📜 Bunu bir düşün', '🧜‍♀️ Deniz kızı bir söz fısıldıyor', '🌊 Dalgaların getirdiği söz'];
+const EXAM_POSS = { 'Vize': 'vizesi', 'Final': 'finali', 'Quiz': 'quizi', 'Proje teslimi': 'proje teslimi', 'Bütünleme': 'bütünlemesi' };
+const DEF_MOT = { on: true, perDay: 3, start: '10:00', end: '21:30', quietClass: true, overlay: true, style: 'mix' };
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60];
 const NEW_PER_DAY = 10;
 const DAYS = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
@@ -588,6 +780,7 @@ function normalize(d) {
   if (!d.v || d.v < 3) { d.words = (d.words || []).filter(w => !w.starter); d.v = 3; }
   d.profile = Object.assign({}, DEF_PROFILE, d.profile);
   d.toefl = Object.assign({}, DEF_TOEFL, d.toefl);
+  d.mot = Object.assign({}, DEF_MOT, d.mot);
   ['exams', 'words', 'tests', 'notes'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
   if (!Array.isArray(d.links)) d.links = defaultLinks();
   d.days = d.days || {}; d.badges = d.badges || {}; d.created = d.created || todayKey();
@@ -737,6 +930,11 @@ function greeting() {
   return h < 5 ? 'İyi geceler' : h < 11 ? 'Günaydın' : h < 17 ? 'İyi günler' : h < 22 ? 'İyi akşamlar' : 'İyi geceler';
 }
 function ringArc(r, frac) { const c = 2 * Math.PI * r; return `stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c * (1 - Math.min(1, frac))).toFixed(2)}"`; }
+function quoteOfDay() {
+  const n = Math.floor((new Date() - new Date(2026, 0, 1)) / 86400000);
+  const q = QUOTES[((n * 7) % QUOTES.length + QUOTES.length) % QUOTES.length];
+  return `<div class="card tab quote-card"><span class="label">Günün sözü</span><p class="quote">“${esc(q[1])}”</p><span class="quote-a">— ${esc(q[2])}</span></div>`;
+}
 let lastDayStatus = '';
 function renderToday() {
   const now = new Date(), k = todayKey(), st = stats(k), P = D.profile, si = streakInfo(), sug = suggestions();
@@ -813,6 +1011,7 @@ function renderToday() {
       <div class="col">
         ${examHtml}
         <div class="card tab"><span class="label">Bugünün programı</span>${sched}</div>
+        ${quoteOfDay()}
       </div>
     </div>`;
 
@@ -1118,6 +1317,7 @@ function fillSettings() {
   }).join('') : '<p class="note">Vize ve final tarihlerini ekle. Sınavı yaklaşan ders Bugün ekranında öne çıkar.</p>';
   let ok = true; try { ok = NATIVE ? NATIVE.notifOk() : true; } catch (e) {}
   $('#notifBanner').hidden = ok;
+  fillMotivation();
   let ver = 'web'; try { if (NATIVE) ver = NATIVE.version(); } catch (e) {}
   $('#aboutTxt').textContent = 'Çelik İrade ' + ver + ' · ekran sürümü ' + WEB_VERSION + '. Verilerin bu cihazda saklanır; güncellemeler verilere dokunmaz.';
 }
@@ -1125,7 +1325,50 @@ function syncNative() {
   if (!NATIVE) return;
   const p = (D.profile.remindAt || '19:00').split(':').map(Number);
   try { NATIVE.setReminder(!!D.profile.remindOn, p[0] || 0, p[1] || 0); NATIVE.setMusicPrefs(!!D.profile.spPause); } catch (e) {}
+  syncMotivation();
 }
+
+/* ================= Deniz kızı mesajları ================= */
+const hasMot = () => !!NATIVE && typeof NATIVE.setMotivation === 'function';
+let poolSent = false;
+function motPool() {
+  const names = {};
+  Object.keys(COURSES).forEach(c => { names[c] = shortName(c); });
+  return {
+    v: 1, titles: MOT_TITLES, quoteTitles: QUOTE_TITLES, names, examPoss: EXAM_POSS,
+    msgs: MSGS.map(m => ({ i: m[0], t: m[1], c: m[2] ? m[2].split(' ') : [] }))
+      .concat(QUOTES.map(q => ({ i: q[0], t: q[1], a: q[2] })))
+  };
+}
+function syncMotivation() {
+  if (!hasMot()) return;
+  const M = D.mot;
+  const busy = [];
+  Object.keys(SCHEDULE).forEach(dow => SCHEDULE[dow].forEach(b => busy.push([Number(dow), toMin(b[0]) - 5, toMin(b[1]) + 5])));
+  try {
+    if (!poolSent) { NATIVE.setMotivationPool(JSON.stringify(motPool())); poolSent = true; }
+    NATIVE.setMotivation(JSON.stringify({ on: !!M.on, perDay: M.perDay, start: toMin(M.start), end: toMin(M.end), quietClass: !!M.quietClass, overlay: !!M.overlay, style: M.style, busy }));
+  } catch (e) {}
+}
+function fillMotivation() {
+  const M = D.mot;
+  $('#motCard').hidden = !hasMot() && !!NATIVE;
+  $('#motOn').checked = !!M.on;
+  $('#motPer').innerHTML = [1, 2, 3, 4, 5].map(n => `<button class="chip sm" data-mper="${n}" aria-pressed="${M.perDay === n}">${n}</button>`).join('');
+  $('#motStart').value = M.start; $('#motEnd').value = M.end;
+  $('#motStyle').value = M.style;
+  $('#motQuiet').checked = !!M.quietClass;
+  $('#motOverlay').checked = !!M.overlay;
+  let overlayOk = true; try { if (hasMot()) overlayOk = NATIVE.overlayOk(); } catch (e) {}
+  $('#overlayBanner').hidden = !M.on || !M.overlay || overlayOk;
+  let hist = [];
+  try { if (hasMot()) hist = JSON.parse(NATIVE.motivationHistory() || '[]'); } catch (e) {}
+  $('#motHist').innerHTML = hist.length ? '<span class="note">Son gelenler</span><div class="mhist">' + hist.slice(0, 5).map(h => {
+    const d = new Date(h.t);
+    return `<div><b>${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)} ${pad(d.getHours())}:${pad(d.getMinutes())} · ${esc(h.title)}</b>${esc(h.text)}</div>`;
+  }).join('') + '</div>' : '';
+}
+function motChanged(msg) { save(true); syncMotivation(); fillMotivation(); if (msg) toast(msg); }
 
 /* ================= Sekmeler ================= */
 let currentTab = 'bugun';
@@ -1243,6 +1486,8 @@ function openUrge(mode) {
   const why = (D.profile.why || '').trim(), bq = $('#urgeWhy');
   bq.textContent = why || 'Henüz bir neden yazmadın. Ayarlar’dan ekle. Zor anda kendi cümlelerini görmek işe yarar.';
   bq.className = why ? '' : 'empty-why';
+  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  $('#urgeQuote').innerHTML = '“' + esc(q[1]) + '” <span class="quote-a">— ' + esc(q[2]) + '</span>';
   $('#urgeStay').textContent = mode === 'run' ? 'Devam ediyorum' : '10 dakika çalışacağım';
   $('#breathTxt').textContent = 'Yavaşça nefes al';
   updateQuit();
@@ -1393,6 +1638,13 @@ document.addEventListener('click', e => {
   const task = el.closest('[data-task]'); if (task) { selTask = selTask === task.dataset.task ? '' : task.dataset.task; renderOdak(); return; }
   const dur = el.closest('[data-dur]'); if (dur) { selDur = +dur.dataset.dur; renderOdak(); return; }
   const mus = el.closest('[data-music]'); if (mus) { musicCmd(mus.dataset.music); return; }
+  const mper = el.closest('[data-mper]'); if (mper) { D.mot.perDay = +mper.dataset.mper; motChanged('Günde ' + D.mot.perDay + ' mesaj'); return; }
+  if (el.closest('#motSound')) { if (hasMot()) NATIVE.playMermaid(); else toast('Ses telefonda çalar.'); return; }
+  if (el.closest('#motTest')) {
+    if (!hasMot()) { toast('Bu özellik telefonda çalışır.'); return; }
+    save(true); NATIVE.motivationPreview(); setTimeout(fillMotivation, 1200); return;
+  }
+  if (el.closest('#overlayFix')) { if (hasMot()) NATIVE.openOverlaySettings(); return; }
   if (el.closest('[data-urge="home"]')) { openUrge('home'); return; }
   if (el.closest('[data-review]')) { startReview(); return; }
   const del = el.closest('[data-del]');
@@ -1454,6 +1706,15 @@ document.addEventListener('change', e => {
   else if (id === 'spUrl') { D.profile.spUrl = e.target.value.trim(); save(true); toast(D.profile.spUrl ? 'Çalma listesi kaydedildi' : 'Çalma listesi kaldırıldı'); }
   else if (id === 'spAuto') { D.profile.spAuto = e.target.checked; save(true); }
   else if (id === 'spPause') { D.profile.spPause = e.target.checked; save(true); syncNative(); }
+  else if (id === 'motOn') { D.mot.on = e.target.checked; motChanged(D.mot.on ? 'Deniz kızı mesajları açık 🧜‍♀️' : 'Deniz kızı mesajları kapalı'); }
+  else if (id === 'motStart' || id === 'motEnd') {
+    const s = $('#motStart').value || DEF_MOT.start, en = $('#motEnd').value || DEF_MOT.end;
+    if (toMin(en) - toMin(s) < 60) { toast('En geç saat, en erkenden en az 1 saat sonra olmalı.'); fillMotivation(); return; }
+    D.mot.start = s; D.mot.end = en; motChanged('Mesaj saatleri: ' + s + '–' + en);
+  }
+  else if (id === 'motStyle') { D.mot.style = e.target.value; motChanged(); }
+  else if (id === 'motQuiet') { D.mot.quietClass = e.target.checked; motChanged(); }
+  else if (id === 'motOverlay') { D.mot.overlay = e.target.checked; motChanged(); }
   else if (id === 'remOn') { D.profile.remindOn = e.target.checked; save(true); syncNative(); toast(D.profile.remindOn ? 'Hatırlatma açık: ' + D.profile.remindAt : 'Hatırlatma kapalı'); }
   else if (id === 'remAt') { if (e.target.value) { D.profile.remindAt = e.target.value; save(true); syncNative(); toast('Hatırlatma saati: ' + D.profile.remindAt); } }
 });
