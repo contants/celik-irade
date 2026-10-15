@@ -1,9 +1,9 @@
 {
-    "web":  3,
+    "web":  4,
     "webUrl":  "https://raw.githubusercontent.com/contants/celik-irade/main/web/index.html",
-    "webMinApk":  3,
-    "apk":  4,
-    "apkUrl":  "https://github.com/contants/celik-irade/releases/download/v1.3/CelikIrade.apk",
-    "apkName":  "1.3",
-    "notes":  "Yeni simge: gülümseyen mavi çalar saat."
+    "webMinApk":  5,
+    "apk":  5,
+    "apkUrl":  "https://github.com/contants/celik-irade/releases/download/v1.4/CelikIrade.apk",
+    "apkName":  "1.4",
+    "notes":  "Deniz kızı mesajları, ünlü sözler ve deniz kızı sesi geldi. 🧜‍♀️"
 }
