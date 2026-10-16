@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Çelik İrade</title>
+<title>Odak</title>
 <style>
 @font-face{font-family:"Archivo";src:url(fonts/Archivo.ttf) format("truetype");font-weight:100 900;font-stretch:62% 125%}
 @font-face{font-family:"Manrope";src:url(fonts/Manrope.ttf) format("truetype");font-weight:200 800}
@@ -534,7 +534,7 @@ blockquote.empty-why{font-weight:500;color:var(--muted)}
 
 <script>
 'use strict';
-const WEB_VERSION = 4;
+const WEB_VERSION = 5;
 /* ================= Sabitler ================= */
 const COURSES = {
   'EEM 3127': 'Elektrik Makineleri I',
@@ -729,7 +729,7 @@ const QUOTES = [
   ['q34', 'Su damlası taşı oyar.', 'Ovidius'],
   ['q35', 'Limandaki gemi güvendedir ama gemiler bunun için yapılmamıştır.', 'John A. Shedd']
 ];
-const MOT_TITLES = ['🧜‍♀️ Deniz kızından mesaj', '🌊 Dalgalardan bir not', '🐚 Deniz kabuğu fısıldıyor', '🧜‍♀️ Deniz kızı diyor ki', '🌊 Kıyıdan selam', '🐬 Yunuslardan haber var', '⚓ Kaptana not', '💦 Derinlerden bir mesaj', '🧜‍♀️ Şşş… sana bir mesaj var', '✨ Çelik İrade'];
+const MOT_TITLES = ['🧜‍♀️ Deniz kızından mesaj', '🌊 Dalgalardan bir not', '🐚 Deniz kabuğu fısıldıyor', '🧜‍♀️ Deniz kızı diyor ki', '🌊 Kıyıdan selam', '🐬 Yunuslardan haber var', '⚓ Kaptana not', '💦 Derinlerden bir mesaj', '🧜‍♀️ Şşş… sana bir mesaj var', '✨ Odak'];
 const QUOTE_TITLES = ['💬 Bir söz', '🐚 Kabuktan bir söz', '📜 Bunu bir düşün', '🧜‍♀️ Deniz kızı bir söz fısıldıyor', '🌊 Dalgaların getirdiği söz'];
 const EXAM_POSS = { 'Vize': 'vizesi', 'Final': 'finali', 'Quiz': 'quizi', 'Proje teslimi': 'proje teslimi', 'Bütünleme': 'bütünlemesi' };
 const DEF_MOT = { on: true, perDay: 3, start: '10:00', end: '21:30', quietClass: true, overlay: true, style: 'mix' };
@@ -1055,7 +1055,7 @@ function renderOdak() {
     $('#runEnd').textContent = 'Bitiş ' + pad(end.getHours()) + ':' + pad(end.getMinutes());
     tick();
   } else {
-    document.title = 'Çelik İrade';
+    document.title = 'Odak';
     document.querySelectorAll('#courseGrid .cbtn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pick === selCourse)));
     document.querySelectorAll('#durChips .chip').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.dur === selDur)));
     const sec = SEC_BY_C[selCourse];
@@ -1319,7 +1319,7 @@ function fillSettings() {
   $('#notifBanner').hidden = ok;
   fillMotivation();
   let ver = 'web'; try { if (NATIVE) ver = NATIVE.version(); } catch (e) {}
-  $('#aboutTxt').textContent = 'Çelik İrade ' + ver + ' · ekran sürümü ' + WEB_VERSION + '. Verilerin bu cihazda saklanır; güncellemeler verilere dokunmaz.';
+  $('#aboutTxt').textContent = 'Odak ' + ver + ' · ekran sürümü ' + WEB_VERSION + '. Verilerin bu cihazda saklanır; güncellemeler verilere dokunmaz.';
 }
 function syncNative() {
   if (!NATIVE) return;
@@ -1427,7 +1427,7 @@ function tick() {
   const s = Math.ceil(rem / 1000), txt = pad(Math.floor(s / 60)) + ':' + pad(s % 60);
   $('#runTime').textContent = txt;
   $('#runRing').setAttribute('stroke-dashoffset', String(653.45 * (1 - rem / total)));
-  document.title = txt + ' · Çelik İrade';
+  document.title = txt + ' · Odak';
   if (NATIVE && ++tickN % 6 === 0 && currentTab === 'odak') {
     let on = musicOn; try { on = NATIVE.musicActive(); } catch (e) {}
     if (on !== musicOn) renderMusic();
@@ -1828,7 +1828,7 @@ window.onUpdateResult = r => {
   manualCheck = false;
 };
 window.onInstallResult = r => {
-  if (r === 'permission') { toast('Açılan ekranda Çelik İrade için izni aç, sonra Güncelle\'ye tekrar bas.', 6000); return; }
+  if (r === 'permission') { toast('Açılan ekranda Odak için izni aç, sonra Güncelle\'ye tekrar bas.', 6000); return; }
   if (r === 'started') { toast('Kurulum ekranı açılıyor. "Güncelle"ye bas, verilerin kalır.', 6000); return; }
   toast('Güncelleme indirilemedi: ' + String(r).replace(/^error:/, ''), 6000);
 };
