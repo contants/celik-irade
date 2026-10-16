@@ -1,9 +1,9 @@
 {
-    "web":  5,
+    "web":  6,
     "webUrl":  "https://raw.githubusercontent.com/contants/celik-irade/main/web/index.html",
     "webMinApk":  5,
-    "apk":  6,
-    "apkUrl":  "https://github.com/contants/celik-irade/releases/download/v1.5/CelikIrade.apk",
-    "apkName":  "1.5",
-    "notes":  "Yeni adı Odak, yeni simgesi su perisi."
+    "apk":  7,
+    "apkUrl":  "https://github.com/contants/celik-irade/releases/download/v1.6/CelikIrade.apk",
+    "apkName":  "1.6",
+    "notes":  "Yeni simge."
 }
